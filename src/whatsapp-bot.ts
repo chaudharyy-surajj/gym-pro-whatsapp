@@ -61,7 +61,8 @@ async function upsertChat(phone: string, lastMessage: string, name?: string) {
     // If no name provided, try to look up member name
     let chatName = name;
     if (!chatName) {
-      chatName = await getMemberNameByPhone(cleanPhone);
+      const memberName = await getMemberNameByPhone(cleanPhone);
+      chatName = memberName || undefined;
     }
     
     await prisma.chat.upsert({
