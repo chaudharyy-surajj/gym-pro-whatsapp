@@ -16,8 +16,8 @@ services:
           property: connectionString
     autoDeploy: true
 
-  # WhatsApp Bot Background Worker
-  - type: worker
+  # WhatsApp Bot (as Web Service - free tier compatible)
+  - type: web
     name: gym-pro-whatsapp-bot
     env: node
     region: singapore
