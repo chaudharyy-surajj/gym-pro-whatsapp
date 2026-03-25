@@ -1,0 +1,8 @@
+run = "npm run bot"
+entrypoint = "src/whatsapp-bot.ts"
+
+[nix]
+channel = "stable-22_11"
+
+[deployment]
+run = ["sh", "-c", "npm run bot"]
