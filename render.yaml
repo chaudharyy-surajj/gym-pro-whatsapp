@@ -16,23 +16,6 @@ services:
           property: connectionString
     autoDeploy: true
 
-  # WhatsApp Bot (as Web Service - free tier compatible)
-  - type: web
-    name: gym-pro-whatsapp-bot
-    env: node
-    region: singapore
-    plan: free
-    buildCommand: npm install && npx prisma generate
-    startCommand: npm run bot
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: DATABASE_URL
-        fromDatabase:
-          name: gym-pro-db
-          property: connectionString
-    autoDeploy: true
-
 databases:
   - name: gym-pro-db
     databaseName: gym_pro
