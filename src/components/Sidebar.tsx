@@ -27,9 +27,13 @@ export default function Sidebar() {
     >
       {/* Logo */}
       <div className="p-5 border-b" style={{ borderColor: "var(--sidebar-border)" }}>
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center text-white font-black text-lg shadow-lg shadow-primary/30 flex-shrink-0">
-            G
+        <Link href="/" className="flex items-center gap-3 group">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105">
+            <img 
+              src="/gravity-fitness-icon.svg" 
+              alt="Gravity Fitness" 
+              className="w-full h-full"
+            />
           </div>
           <div className="min-w-0">
             <p className="text-[13px] font-extrabold leading-tight truncate" style={{ color: "var(--foreground)" }}>
@@ -39,7 +43,7 @@ export default function Sidebar() {
               Unisex Gym
             </p>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Nav */}

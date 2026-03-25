@@ -15,6 +15,8 @@ export async function GET() {
         orderBy: { createdAt: "desc" }
     });
 
+    const config = await prisma.gymConfig.findFirst();
+
     const stats = {
         messagesSent: await prisma.botMessageLog.count({ where: { direction: "OUTBOUND" } }),
         autoReplies: await prisma.botMessageLog.count({ where: { type: "AUTO_REPLY" } }),
@@ -25,7 +27,8 @@ export async function GET() {
         status: status?.status || "OFFLINE", 
         qr: status?.qr || null,
         logs,
-        stats
+        stats,
+        config
     });
   } catch (error) {
     return NextResponse.json({ error: "Failed to fetch bot status" }, { status: 500 });

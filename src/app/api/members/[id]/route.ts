@@ -42,12 +42,9 @@ export async function PUT(
         amountPaid: amountPaid ? parseFloat(amountPaid) : null,
         notes: notes || null,
         cardNumber: cardNumber || null,
-        payments: amountPaid && parseFloat(amountPaid) > 0 ? {
-          create: {
-            amount: parseFloat(amountPaid),
-            type: "RENEWAL",
-          }
-        } : undefined,
+        // ⚠️  NO payment creation here.
+        // Payments are only recorded via POST /api/members/[id]/renew
+        // (new member admission) or POST /api/members (ADMISSION on create).
       },
     });
     return NextResponse.json(member);

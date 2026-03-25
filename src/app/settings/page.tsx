@@ -7,9 +7,9 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    monthlyPrice: 999,
-    quarterlyPrice: 2699,
-    annualPrice: 9999,
+    monthlyPrice: 1500,
+    quarterlyPrice: 4000,
+    annualPrice: 10000,
   });
   const [customPlans, setCustomPlans] = useState<Array<{ id: string; label: string; months: number; price: number }>>([]);
 
@@ -19,9 +19,9 @@ export default function SettingsPage() {
       .then((data) => {
         if (data && !data.error) {
           setForm({
-            monthlyPrice: data.monthlyPrice ?? 999,
-            quarterlyPrice: data.quarterlyPrice ?? 2699,
-            annualPrice: data.annualPrice ?? 9999,
+            monthlyPrice: data.monthlyPrice ?? 1500,
+            quarterlyPrice: data.quarterlyPrice ?? 4000,
+            annualPrice: data.annualPrice ?? 10000,
           });
           try {
             setCustomPlans(JSON.parse(data.customPlans || "[]"));

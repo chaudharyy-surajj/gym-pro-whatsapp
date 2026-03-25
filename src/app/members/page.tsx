@@ -6,7 +6,8 @@ import {
   CheckCircle2, Clock, X, Upload, User,
   Phone, Mail, MapPin, AlertTriangle, Calendar,
   CreditCard, Shield, FileText, ChevronDown,
-  Loader2, AlertCircle, Users, Snowflake, Zap, Lock, Unlock
+  Loader2, AlertCircle, Users, Snowflake, Zap, Lock, Unlock,
+  RefreshCw
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────
@@ -47,9 +48,9 @@ const EMPTY_FORM: FormData = {
 };
 
 const defaultPlans = [
-  { value: "MONTHLY",   label: "Monthly — ₹999",     months: 1,  price: 999  },
-  { value: "QUARTERLY", label: "Quarterly — ₹2,699", months: 3,  price: 2699 },
-  { value: "ANNUAL",    label: "Annual — ₹9,999",    months: 12, price: 9999 },
+  { value: "MONTHLY",   label: "Monthly — ₹1,500",     months: 1,  price: 1500  },
+  { value: "QUARTERLY", label: "Quarterly — ₹4,000", months: 3,  price: 4000 },
+  { value: "ANNUAL",    label: "Annual — ₹10,000",    months: 12, price: 10000 },
   { value: "CUSTOM",    label: "Custom Plan",        months: 0,  price: 0    },
 ];
 const STATUSES = ["ACTIVE", "DUE", "INACTIVE", "FROZEN"];
@@ -174,6 +175,16 @@ function MemberFormPanel({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // ── Issue 1: Auto-fill today's date for new member forms ──────────
+  useEffect(() => {
+    if (!isEdit && !form.joinDate) {
+      const today = new Date().toISOString().split("T")[0];
+      setForm((prev) => ({ ...prev, joinDate: today }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // ─────────────────────────────────────────────────────────────────
 
   function set(field: keyof FormData, value: string | null) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -488,15 +499,22 @@ function MemberFormPanel({
         >
           <button
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold text-theme-muted hover:text-theme transition-all"
-            style={{ backgroundColor: "var(--card)", border: "1px solid var(--card-border)" }}
+            className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-80 text-theme"
+            style={{ 
+              backgroundColor: "var(--card)", 
+              border: "2px solid var(--card-border)"
+            }}
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="flex items-center gap-2 px-6 py-2.5 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all disabled:opacity-60 disabled:pointer-events-none text-sm"
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold shadow-lg hover:scale-[1.02] transition-all disabled:opacity-60 disabled:pointer-events-none text-sm"
+            style={{
+              backgroundColor: "var(--primary)",
+              color: "#FFFFFF"
+            }}
           >
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
             {isEdit ? "Save Changes" : "Add Member"}
@@ -621,13 +639,153 @@ function MemberDetailPanel({
           {/* Footer */}
           <div className="p-6 border-t flex justify-end gap-3" style={{ borderColor: "var(--drawer-border)", backgroundColor: "var(--background-secondary)" }}>
             <button onClick={onClose} className="px-6 py-2.5 rounded-xl text-sm font-semibold text-theme-muted hover:text-theme transition-all" style={{ backgroundColor: "var(--card)", border: "1px solid var(--card-border)" }}>Close</button>
-            <button onClick={() => { onClose(); onEdit(); }} className="px-6 py-2.5 rounded-xl font-bold bg-primary text-white hover:bg-primary/90 transition-all flex items-center gap-2 shadow-lg shadow-primary/20">
+            <button 
+              onClick={() => { onClose(); onEdit(); }} 
+              className="px-6 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 shadow-lg"
+              style={{
+                backgroundColor: "var(--primary)",
+                color: "#FFFFFF"
+              }}
+            >
               <Edit2 className="w-4 h-4" /> Edit Member
             </button>
           </div>
         </div>
       </div>
     </>
+  );
+}
+
+// ── Renew / Upgrade Modal ─────────────────────────────────────────────
+function RenewModal({
+  member, plans, onClose, onRenewed,
+}: {
+  member: Member; plans: any[]; onClose: () => void; onRenewed: () => void;
+}) {
+  const defaultPlan = plans.find(p => p.value === member.plan) ?? plans[0];
+  const [selectedPlan, setSelectedPlan] = useState<string>(defaultPlan?.value ?? "");
+  const [amount, setAmount] = useState<string>(
+    String(defaultPlan?.price > 0 ? defaultPlan.price : member.amountPaid ?? "")
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function handlePlanChange(val: string) {
+    setSelectedPlan(val);
+    const p = plans.find(x => x.value === val);
+    if (p && p.price > 0) setAmount(String(p.price));
+  }
+
+  async function handleConfirm() {
+    if (!selectedPlan) { setError("Please select a plan."); return; }
+    const amt = parseFloat(amount);
+    if (!amt || amt <= 0) { setError("Please enter a valid amount."); return; }
+    setSaving(true); setError(null);
+    try {
+      const res = await fetch(`/api/members/${member.id}/renew`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: selectedPlan, amount: amt }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        setError(d.error ?? "Renewal failed.");
+      } else {
+        onRenewed();
+      }
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ backgroundColor: "var(--overlay-bg)" }}>
+      <div
+        className="w-full max-w-md p-6 rounded-2xl shadow-2xl relative"
+        style={{ backgroundColor: "var(--drawer-bg)", border: "1px solid var(--drawer-border)", animation: "slideIn 0.2s ease-out" }}
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-5">
+          <div className="p-2 rounded-xl bg-primary/10">
+            <RefreshCw className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-theme">Renew / Upgrade Membership</h2>
+            <p className="text-xs text-theme-muted">{member.name} · Current: {member.plan ?? "None"}</p>
+          </div>
+          <button onClick={onClose} className="ml-auto p-2 rounded-xl text-theme-muted hover:text-theme transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {error && (
+          <div className="flex items-center gap-2 mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />{error}
+          </div>
+        )}
+
+        <div className="space-y-4 mb-6">
+          {/* Plan */}
+          <div>
+            <label className="block text-xs font-semibold text-theme-muted mb-1.5">New Plan</label>
+            <div className="relative">
+              <select
+                value={selectedPlan}
+                onChange={(e) => handlePlanChange(e.target.value)}
+                className="w-full appearance-none rounded-xl px-3.5 py-2.5 text-sm text-theme outline-none transition-all focus:ring-2 focus:ring-primary/30 pr-9"
+                style={{ backgroundColor: "var(--input-bg)", border: "1px solid var(--input-border)" }}
+              >
+                <option value="">Select plan</option>
+                {plans.filter(p => p.value !== "CUSTOM").map(p => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-muted pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Amount */}
+          <div>
+            <label className="block text-xs font-semibold text-theme-muted mb-1.5">Amount Paid (₹)</label>
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="e.g. 4000"
+              className="w-full rounded-xl px-3.5 py-2.5 text-sm text-theme outline-none transition-all focus:ring-2 focus:ring-primary/30"
+              style={{ backgroundColor: "var(--input-bg)", border: "1px solid var(--input-border)" }}
+            />
+            <p className="text-xs text-theme-muted mt-1.5">
+              ₹{amount || 0} will be added to dashboard income. End date auto-computed.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-theme-muted transition-all"
+            style={{ backgroundColor: "var(--badge-bg)", border: "1px solid var(--card-border)" }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={saving}
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg"
+            style={{
+              backgroundColor: "var(--primary)",
+              color: "#FFFFFF"
+            }}
+          >
+            {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+            Confirm Renewal
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -685,6 +843,7 @@ export default function MembersPage() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [renewTarget, setRenewTarget] = useState<Member | null>(null);
 
   async function fetchMembers() {
     setLoading(true);
@@ -711,9 +870,9 @@ export default function MembersPage() {
         }));
 
         setPlans([
-          { value: "MONTHLY",   label: `Monthly — ₹${data.monthlyPrice ?? 999}`,    months: 1,  price: data.monthlyPrice ?? 999 },
-          { value: "QUARTERLY", label: `Quarterly — ₹${data.quarterlyPrice ?? 2699}`, months: 3,  price: data.quarterlyPrice ?? 2699 },
-          { value: "ANNUAL",    label: `Annual — ₹${data.annualPrice ?? 9999}`,       months: 12, price: data.annualPrice ?? 9999 },
+          { value: "MONTHLY",   label: `Monthly — ₹${data.monthlyPrice ?? 1500}`,    months: 1,  price: data.monthlyPrice ?? 1500 },
+          { value: "QUARTERLY", label: `Quarterly — ₹${data.quarterlyPrice ?? 4000}`, months: 3,  price: data.quarterlyPrice ?? 4000 },
+          { value: "ANNUAL",    label: `Annual — ₹${data.annualPrice ?? 10000}`,       months: 12, price: data.annualPrice ?? 10000 },
           ...dynamicCustomPlans,
           { value: "CUSTOM",    label: "Other (Manual)",                           months: 0,  price: 0 },
         ]);
@@ -799,7 +958,11 @@ export default function MembersPage() {
           </div>
           <button
             onClick={openAdd}
-            className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all text-sm"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold shadow-lg hover:scale-[1.02] transition-all text-sm"
+            style={{
+              backgroundColor: "var(--primary)",
+              color: "#FFFFFF"
+            }}
           >
             <UserPlus className="w-4 h-4" />
             Add New Member
@@ -949,6 +1112,17 @@ export default function MembersPage() {
                           </button>
                         )}
 
+                        {/* Renew / Upgrade */}
+                        <button
+                          onClick={() => setRenewTarget(member)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all hover:opacity-80"
+                          style={{ backgroundColor: "rgba(34,197,94,0.1)", color: "#22c55e" }}
+                          title="Renew or upgrade membership"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          Renew
+                        </button>
+
                         {/* Edit */}
                         <button
                           onClick={() => openEdit(member)}
@@ -1006,6 +1180,16 @@ export default function MembersPage() {
           onCancel={() => setDeleteId(null)}
           onConfirm={() => handleDelete(deleteId)}
           loading={deleting}
+        />
+      )}
+
+      {/* Renew Modal */}
+      {renewTarget && (
+        <RenewModal
+          member={renewTarget}
+          plans={plans}
+          onClose={() => setRenewTarget(null)}
+          onRenewed={() => { setRenewTarget(null); fetchMembers(); }}
         />
       )}
 

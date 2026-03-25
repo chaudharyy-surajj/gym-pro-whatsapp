@@ -25,7 +25,7 @@ interface DashStats {
   totalExpenses: number;
   netRevenue: number;
   chartData: Array<{ month: string; revenue: number }>;
-  activeMembersList: MemberRow[];
+  allMembersList: MemberRow[];
   feesPendingList: FeeRow[];
   birthdaysList: BdayRow[];
   attendanceList: AttRow[];
@@ -88,8 +88,12 @@ function MembersPanel({ members }: { members: MemberRow[] }) {
               <td className="py-3 pr-4" style={{ color: "var(--foreground-muted)" }}>{m.phone}</td>
               <td className="py-3 pr-4" style={{ color: "var(--foreground-muted)" }}>{planBadge(m.plan)}</td>
               <td className="py-3 pr-4">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-green-500/10 text-green-500">
-                  <CheckCircle2 className="w-3 h-3" /> Active
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ${
+                  m.status === "ACTIVE" ? "bg-green-500/10 text-green-500" : 
+                  m.status === "DUE" ? "bg-orange-500/10 text-orange-500" : 
+                  "bg-red-500/10 text-red-500"
+                }`}>
+                  {m.status === "ACTIVE" ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />} {m.status}
                 </span>
               </td>
               <td className="py-3" style={{ color: "var(--foreground-muted)" }}>{fmtDate(m.membershipEnd)}</td>
@@ -290,15 +294,15 @@ export default function Home() {
   }, []);
 
   const statCards = [
-    { key: "members" as PanelKey,    label: "Active Members",    value: stats?.totalMembers,    icon: Users,    color: "text-blue-500",   trend: "Live" },
-    { key: "fees" as PanelKey,       label: "Upcoming Renewals", value: stats?.feesPending,     icon: Receipt,  color: "text-orange-500", trend: "Next 7 days" },
+    { key: "members" as PanelKey,    label: "Total Members",     value: stats?.totalMembers,    icon: Users,    color: "text-blue-500",   trend: "Total" },
+    { key: "fees" as PanelKey,       label: "Due Members",       value: stats?.feesPending,     icon: Receipt,  color: "text-orange-500", trend: "Payment Due" },
     { key: "birthdays" as PanelKey,  label: "Today's Birthdays", value: stats?.birthdaysToday,  icon: Cake,     color: "text-pink-500",   trend: "Today" },
     { key: "attendance" as PanelKey, label: "Daily Attendance",  value: stats?.attendanceToday, icon: Activity, color: "text-green-500",  trend: "Today" },
   ];
 
   function renderPanel() {
     if (!activePanel || !stats) return null;
-    if (activePanel === "members")    return <MembersPanel members={stats.activeMembersList} />;
+    if (activePanel === "members")    return <MembersPanel members={stats.allMembersList} />;
     if (activePanel === "fees")       return <FeesPanel fees={stats.feesPendingList} />;
     if (activePanel === "birthdays")  return <BirthdaysPanel members={stats.birthdaysList} />;
     if (activePanel === "attendance") return <AttendancePanel members={stats.attendanceList} />;
@@ -324,7 +328,7 @@ export default function Home() {
         <header className="flex items-center justify-between mb-10">
           <div>
             <h1 className="text-3xl font-bold mb-1" style={{ color: "var(--foreground)" }}>{greeting}, Admin 👋</h1>
-            <p className="text-sm" style={{ color: "var(--foreground-muted)" }}>Gravity Fitness Unisex Gym — here's your overview for today.</p>
+            <p className="text-sm" style={{ color: "var(--foreground-muted)" }}>Gravity Fitness Unisex Gym — here&apos;s your overview for today.</p>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -384,24 +388,42 @@ export default function Home() {
                 <p className="text-2xl font-black text-primary">₹{stats?.netRevenue?.toLocaleString() ?? "0"}</p>
               </div>
             </div>
-            <div className="flex items-end gap-3 h-36">
+            <div className="flex items-end gap-3 h-48">
               {stats?.chartData?.length ? stats.chartData.map((d, i) => {
-                const max = Math.max(...stats.chartData.map(x => x.revenue), 1000);
-                const h = (d.revenue / max) * 100;
+                const max = Math.max(...stats.chartData.map(x => x.revenue), 1);
+                const h = max > 0 ? (d.revenue / max) * 100 : 0;
+                const displayHeight = Math.max(h, 8); // Minimum 8% height for visibility
                 return (
                   <div key={i} className="flex-1 flex flex-col items-center gap-2 group relative">
                     <div
-                      className="w-full rounded-lg bg-primary/60 hover:bg-primary transition-all cursor-pointer"
-                      style={{ height: `${Math.max(h, 5)}%` }}
-                    />
-                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
-                      ₹{d.revenue.toLocaleString()}
+                      className="w-full rounded-t-lg transition-all cursor-pointer relative"
+                      style={{ 
+                        height: `${displayHeight}%`,
+                        background: d.revenue > 0 
+                          ? 'linear-gradient(180deg, rgba(99, 102, 241, 0.9) 0%, rgba(99, 102, 241, 0.6) 100%)'
+                          : 'rgba(99, 102, 241, 0.2)',
+                        boxShadow: d.revenue > 0 ? '0 4px 12px rgba(99, 102, 241, 0.3)' : 'none'
+                      }}
+                    >
+                      {/* Tooltip */}
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-gray-900 text-white text-xs px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none shadow-lg">
+                        <div className="font-bold">₹{d.revenue.toLocaleString()}</div>
+                        <div className="text-[10px] opacity-75">{d.month}</div>
+                        {/* Arrow */}
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px">
+                          <div className="border-4 border-transparent border-t-gray-900"></div>
+                        </div>
+                      </div>
                     </div>
-                    <span className="text-xs" style={{ color: "var(--foreground-muted)" }}>{d.month}</span>
+                    <span className="text-xs font-semibold" style={{ color: "var(--foreground-muted)" }}>{d.month}</span>
                   </div>
                 );
               }) : (
-                <div className="w-full h-full flex items-center justify-center italic text-xs text-theme-muted">No revenue data yet</div>
+                <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+                  <PieChart className="w-12 h-12 opacity-20" style={{ color: "var(--foreground-muted)" }} />
+                  <p className="text-sm font-medium" style={{ color: "var(--foreground-muted)" }}>No revenue data yet</p>
+                  <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>Add members and payments to see the chart</p>
+                </div>
               )}
             </div>
           </div>

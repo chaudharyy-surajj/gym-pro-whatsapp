@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
-import { computeStatus } from "@/lib/memberStatus";
+import { computeStatus, calcEndDate } from "@/lib/memberStatus";
+import { checkMemberBirthday } from "@/lib/birthdayService";
+import { sendWelcomeMessage } from "@/lib/welcomeMessageService";
 
 const prisma = new PrismaClient();
 
@@ -37,6 +39,21 @@ export async function POST(req: NextRequest) {
 
     const fullName = [firstName, lastName].filter(Boolean).join(" ") || phone;
 
+    // ── Auto-date resolution ──────────────────────────────────────────
+    // If the user didn't supply a join date, default to today.
+    const resolvedJoinDate = joinDate ? new Date(joinDate) : new Date();
+
+    // If membershipEnd wasn't explicitly provided, compute it from plan.
+    const resolvedMembershipEnd = membershipEnd
+      ? new Date(membershipEnd)
+      : calcEndDate(resolvedJoinDate, plan ?? null);
+
+    // feeDueDate falls back to membershipEnd when absent.
+    const resolvedFeeDueDate = feeDueDate
+      ? new Date(feeDueDate)
+      : resolvedMembershipEnd;
+    // ─────────────────────────────────────────────────────────────────
+
     const member = await prisma.member.create({
       data: {
         name: fullName,
@@ -51,9 +68,9 @@ export async function POST(req: NextRequest) {
         emergencyPhone: emergencyPhone || null,
         plan: plan || null,
         status: status || "ACTIVE",
-        joinDate: joinDate ? new Date(joinDate) : null,
-        membershipEnd: membershipEnd ? new Date(membershipEnd) : null,
-        feeDueDate: feeDueDate ? new Date(feeDueDate) : null,
+        joinDate: resolvedJoinDate,
+        membershipEnd: resolvedMembershipEnd,
+        feeDueDate: resolvedFeeDueDate,
         birthday: birthday ? new Date(birthday) : null,
         amountPaid: amountPaid ? parseFloat(amountPaid) : null,
         notes: notes || null,
@@ -66,7 +83,56 @@ export async function POST(req: NextRequest) {
         } : undefined,
       },
     });
-    return NextResponse.json(member, { status: 201 });
+
+    // ── REAL-TIME BIRTHDAY CHECK ──────────────────────────────────────
+    // If the member's birthday is today, send birthday wish immediately
+    let birthdayWishSent = false;
+    let birthdayWishMessage = "";
+    
+    if (birthday) {
+      try {
+        const birthdayResult = await checkMemberBirthday(member.id, "WHATSAPP");
+        birthdayWishSent = birthdayResult.sent;
+        birthdayWishMessage = birthdayResult.reason;
+        
+        if (birthdayResult.sent) {
+          console.log(`🎂 Birthday wish sent immediately for new member: ${fullName}`);
+        } else {
+          console.log(`ℹ️ Birthday wish not sent: ${birthdayResult.reason}`);
+        }
+      } catch (error) {
+        console.error("⚠️ Failed to check birthday for new member:", error);
+        // Don't fail member creation if birthday check fails
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────
+
+    // ── WELCOME MESSAGE ───────────────────────────────────────────────
+    // Send welcome message to new member
+    try {
+      const welcomeResult = await sendWelcomeMessage(
+        member.id,
+        fullName,
+        firstName || fullName.split(' ')[0],
+        member.phone,
+        plan,
+        "Gravity Fitness"
+      );
+      
+      if (welcomeResult.success) {
+        console.log(`👋 Welcome message sent to new member: ${fullName}`);
+      }
+    } catch (error) {
+      console.error("⚠️ Failed to send welcome message:", error);
+      // Don't fail member creation if welcome message fails
+    }
+    // ─────────────────────────────────────────────────────────────────
+
+    return NextResponse.json({
+      ...member,
+      birthdayWishSent,
+      birthdayWishMessage: birthdayWishMessage || undefined
+    }, { status: 201 });
   } catch (error: any) {
     if (error?.code === "P2002") {
       return NextResponse.json({ error: "Phone number already exists" }, { status: 409 });

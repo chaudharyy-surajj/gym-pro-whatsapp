@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Member {
@@ -32,6 +32,7 @@ model Member {
   birthday           DateTime?
   // Tracking
   lastAttendance     DateTime?
+  lastBirthdayWish   DateTime?
   amountPaid         Float?
   payments           Payment[]
   cardNumber         String?   @unique
@@ -85,6 +86,37 @@ model GymConfig {
   absenceEnabled       Boolean @default(false)
   absenceDays          Int     @default(5)
   feeReminderDaysAhead Int     @default(3)
+}
+
+model Chat {
+  id           Int           @id @default(autoincrement())
+  phone        String        @unique
+  name         String?       // Optional member name
+  lastMessage  String?
+  unreadCount  Int           @default(0)
+  updatedAt    DateTime      @updatedAt
+  messages     ChatMessage[]
+}
+
+model ChatMessage {
+  id        Int      @id @default(autoincrement())
+  chatId    Int
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  phone     String   // Copied for convenience
+  text      String
+  direction String   // INBOUND | OUTBOUND
+  status    String   @default("SENT") // SENT | DELIVERED | READ
+  createdAt DateTime @default(now())
+}
+
+model BotCommand {
+  id        Int      @id @default(autoincrement())
+  command   String   // SEND_MESSAGE | RESTART | LOGOUT
+  payload   String   // JSON string with phone/text etc.
+  status    String   @default("PENDING") // PENDING | PROCESSING | DONE | ERROR
+  error     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model BotStatus {

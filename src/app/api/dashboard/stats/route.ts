@@ -16,34 +16,37 @@ export async function GET() {
     });
     const allPayments = await prisma.payment.findMany();
     const allExpenses = await prisma.expense.findMany();
+    const allAttendance = await prisma.attendance.findMany({
+      where: {
+        timestamp: {
+          gte: todayStart,
+          lt: todayEnd,
+        }
+      }
+    });
 
     // Apply computed status to every member
     const members = allMembers.map((m) => ({ ...m, status: computeStatus(m) }));
 
-    // Active members (computed)
-    const activeMembers = members.filter((m) => m.status === "ACTIVE");
+    const totalMembers = members.length;
+    const feesPendingCount = members.filter((m) => m.status === "DUE").length;
 
-    // Fees pending: due date within next 7 days and not INACTIVE/FROZEN
-    const feesPending = members.filter((m) => {
-      if (!m.feeDueDate || m.status === "INACTIVE" || m.status === "FROZEN" || m.status === "DUE") return false; // Adjusted logic to match original if needed
+    // Fees pending (detailed list for next 7 days - legacy logic but improved)
+    const feesPendingList = members.filter((m) => {
+      if (!m.feeDueDate || m.status === "INACTIVE") return false;
       const due = new Date(m.feeDueDate);
       return due >= todayStart && due <= sevenDaysLater;
     });
-    // Wait, let's look at the original feesPending logic (it used m.status !== "INACTIVE" etc)
-    
-    // Birthdays today: match day+month
+
+    // Birthdays today
     const birthdaysToday = members.filter((m) => {
       if (!m.birthday) return false;
       const bday = new Date(m.birthday);
       return bday.getDate() === today.getDate() && bday.getMonth() === today.getMonth();
     });
 
-    // Attendance today
-    const attendanceToday = members.filter((m) => {
-      if (!m.lastAttendance) return false;
-      const la = new Date(m.lastAttendance);
-      return la >= todayStart && la < todayEnd;
-    });
+    // Attendance today (using the new table)
+    const attendanceTodayCount = allAttendance.length;
 
     const totalRevenue = allPayments.reduce((acc, p) => acc + p.amount, 0);
     const totalExpenses = allExpenses.reduce((acc, e) => acc + e.amount, 0);
@@ -64,26 +67,43 @@ export async function GET() {
     }
 
     return NextResponse.json({
-      totalMembers:    activeMembers.length,
-      feesPending:     feesPending.length,
+      totalMembers,
+      feesPending:     feesPendingCount,
       birthdaysToday:  birthdaysToday.length,
-      attendanceToday: attendanceToday.length,
+      attendanceToday: attendanceTodayCount,
       totalRevenue,
       totalExpenses,
       netRevenue: totalRevenue - totalExpenses,
       chartData,
-      activeMembersList: activeMembers.map((m) => ({
-        id: m.id, name: m.name, phone: m.phone, plan: m.plan, status: m.status, membershipEnd: m.membershipEnd,
+      allMembersList: members.map((m) => ({
+        id: m.id, 
+        name: m.name, 
+        phone: m.phone, 
+        plan: m.plan, 
+        status: m.status, 
+        membershipEnd: m.membershipEnd,
       })),
-      feesPendingList: feesPending.map((m) => ({
-        id: m.id, name: m.name, phone: m.phone, plan: m.plan, feeDueDate: m.feeDueDate, amountPaid: m.amountPaid,
+      feesPendingList: feesPendingList.map((m) => ({
+        id: m.id, 
+        name: m.name, 
+        phone: m.phone, 
+        plan: m.plan, 
+        feeDueDate: m.feeDueDate, 
+        amountPaid: m.amountPaid,
       })),
       birthdaysList: birthdaysToday.map((m) => ({
         id: m.id, name: m.name, phone: m.phone, plan: m.plan, birthday: m.birthday,
       })),
-      attendanceList: attendanceToday.map((m) => ({
-        id: m.id, name: m.name, phone: m.phone, plan: m.plan, lastAttendance: m.lastAttendance,
-      })),
+      attendanceList: allAttendance.map((a: any) => {
+        const member = members.find(m => m.id === a.memberId);
+        return {
+          id: a.id, 
+          name: member?.name || "Unknown", 
+          phone: member?.phone || "", 
+          plan: member?.plan || "", 
+          lastAttendance: a.timestamp,
+        };
+      }),
       recentActivity: allMembers.slice(0, 10).map((m) => ({
         id: m.id,
         name: m.name,

@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "bot": "tsx src/whatsapp-bot.ts",
-    "db:push": "prisma db push"
+    "db:push": "prisma db push",
+    "dev:all": "concurrently \"npm run dev\" \"npm run bot\"",
+    "start:all": "concurrently \"npm run start\" \"npm run bot\""
   },
   "dependencies": {
     "@prisma/client": "^5.14.0",
@@ -26,12 +28,15 @@
   "devDependencies": {
     "@types/node": "^20",
     "@types/node-cron": "^3.0.11",
+    "@types/qrcode-terminal": "^0.12.2",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "concurrently": "^9.2.1",
     "eslint": "^8",
     "eslint-config-next": "14.2.3",
     "postcss": "^8",
     "prisma": "^5.14.0",
+    "puppeteer": "^24.40.0",
     "tailwindcss": "^3.4.1",
     "tsx": "^4.10.2",
     "typescript": "^5"
