@@ -1,11 +1,10 @@
 services:
-  # Next.js Web Application
   - type: web
     name: gym-pro-web
     env: node
     region: singapore
     plan: free
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
