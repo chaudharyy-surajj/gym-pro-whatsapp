@@ -42,10 +42,10 @@ export async function GET(req: NextRequest) {
       }),
     ]);
 
-    // Group everything by date string (YYYY-MM-DD)
-    function toDateKey(d: Date): string {
+    // Helper function to convert date to YYYY-MM-DD string
+    const toDateKey = (d: Date): string => {
       return d.toISOString().split("T")[0];
-    }
+    };
 
     // Collect all unique dates
     const dateSet = new Set<string>();
