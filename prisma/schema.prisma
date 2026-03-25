@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Member {
+  id                 Int       @id @default(autoincrement())
+  // Core identity
+  name               String    // kept for bot compatibility (full name)
+  firstName          String?
+  lastName           String?
+  gender             String?   // MALE | FEMALE | OTHER
+  photo              String?   // base64 data URL
+  // Contact
+  phone              String    @unique
+  email              String?
+  address            String?
+  // Emergency
+  emergencyContact   String?
+  emergencyPhone     String?
+  // Membership
+  plan               String?   // MONTHLY | QUARTERLY | ANNUAL
+  status             String    @default("ACTIVE")  // ACTIVE | DUE | INACTIVE
+  joinDate           DateTime?
+  membershipEnd      DateTime?
+  feeDueDate         DateTime?
+  // Health
+  birthday           DateTime?
+  // Tracking
+  lastAttendance     DateTime?
+  amountPaid         Float?
+  payments           Payment[]
+  cardNumber         String?   @unique
+  attendance         Attendance[]
+  notes              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+model Attendance {
+  id        Int      @id @default(autoincrement())
+  memberId  Int
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  timestamp DateTime @default(now())
+  method    String   @default("BIOMETRIC") // BIOMETRIC | MANUAL
+}
+
+model Payment {
+  id        Int      @id @default(autoincrement())
+  memberId  Int
+  amount    Float
+  date      DateTime @default(now())
+  type      String   @default("RENEWAL") // ADMISSION | RENEWAL
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+}
+
+model Expense {
+  id        Int      @id @default(autoincrement())
+  name      String
+  amount    Float
+  category  String?
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model GymConfig {
+  id                   Int     @id @default(1)
+  name                 String  @default("Gravity Fitness Unisex Gym")
+  location             String  @default("123 Fitness St, Downtown")
+  contact              String  @default("+91 98765 43210")
+  hours                String  @default("5:00 AM – 11:00 PM (Daily)")
+  monthlyPrice         Int     @default(999)
+  quarterlyPrice       Int     @default(2699)
+  annualPrice          Int     @default(9999)
+  customPlans          String  @default("[]") // JSON array of custom plans { name, months, price }
+  plansDescription     String  @default("1. Monthly: ₹999\n2. Quarterly: ₹2699 (Save ₹298)\n3. Annual: ₹9999 (Save ₹1989) – Includes 1 hr/month Personal Training.")
+  welcomeMessage       String  @default("Welcome to {GYM_NAME}! Type *plans*, *info*, or *status* to get started.")
+  birthdayEnabled      Boolean @default(true)
+  feeReminderEnabled   Boolean @default(true)
+  absenceEnabled       Boolean @default(false)
+  absenceDays          Int     @default(5)
+  feeReminderDaysAhead Int     @default(3)
+}
+
+model BotStatus {
+  id        Int      @id @default(1)
+  status    String   @default("OFFLINE")
+  phone     String?
+  qr        String?
+  updatedAt DateTime @updatedAt
+}
+
+model BotMessageLog {
+  id        Int      @id @default(autoincrement())
+  phone     String
+  direction String   // INBOUND | OUTBOUND
+  type      String   // QUERY | BIRTHDAY | FEE_REMINDER | ABSENCE | BROADCAST | AUTO_REPLY
+  text      String
+  createdAt DateTime @default(now())
+}
+
+model BroadcastJob {
+  id        Int      @id @default(autoincrement())
+  message   String
+  targets   String   // "ALL" or comma-separated phone numbers
+  status    String   @default("PENDING") // PENDING | DONE
+  createdAt DateTime @default(now())
+}

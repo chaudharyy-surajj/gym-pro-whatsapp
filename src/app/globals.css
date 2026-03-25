@@ -2,32 +2,135 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Dark Theme (default) ───────────────────────────────── */
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+  --background: #09090b;
+  --background-secondary: #18181b;
+  --foreground: #fafafa;
+  --foreground-muted: #a1a1aa;
+  --card: rgba(255,255,255,0.05);
+  --card-border: rgba(255,255,255,0.10);
+  --card-hover: rgba(255,255,255,0.10);
+  --primary: #f97316;
+  --primary-foreground: #ffffff;
+  --muted: #27272a;
+  --scrollbar-track: #09090b;
+  --scrollbar-thumb: #27272a;
+  --scrollbar-thumb-hover: #3f3f46;
+  --sidebar-bg: #09090b;
+  --sidebar-border: rgba(255,255,255,0.07);
+  --input-bg: rgba(255,255,255,0.07);
+  --input-border: rgba(255,255,255,0.12);
+  --input-color: #fafafa;
+  --overlay-bg: rgba(0,0,0,0.70);
+  --drawer-bg: #18181b;
+  --drawer-border: rgba(255,255,255,0.08);
+  --badge-bg: rgba(255,255,255,0.07);
+  --table-row-hover: rgba(255,255,255,0.04);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
+/* ── Light Theme ────────────────────────────────────────── */
+.light {
+  --background: #f1f5f9;
+  --background-secondary: #ffffff;
+  --foreground: #0f172a;
+  --foreground-muted: #64748b;
+  --card: #ffffff;
+  --card-border: rgba(0,0,0,0.09);
+  --card-hover: #f8fafc;
+  --primary: #f97316;
+  --primary-foreground: #ffffff;
+  --muted: #e2e8f0;
+  --scrollbar-track: #f1f5f9;
+  --scrollbar-thumb: #cbd5e1;
+  --scrollbar-thumb-hover: #94a3b8;
+  --sidebar-bg: #ffffff;
+  --sidebar-border: rgba(0,0,0,0.07);
+  --input-bg: #f8fafc;
+  --input-border: rgba(0,0,0,0.12);
+  --input-color: #0f172a;
+  --overlay-bg: rgba(0,0,0,0.45);
+  --drawer-bg: #ffffff;
+  --drawer-border: rgba(0,0,0,0.09);
+  --badge-bg: rgba(0,0,0,0.05);
+  --table-row-hover: rgba(0,0,0,0.02);
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+/* ── Base ───────────────────────────────────────────────── */
+html, body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', sans-serif;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
+/* Force text colors — these override Tailwind where needed */
+.text-theme        { color: var(--foreground) !important; }
+.text-theme-muted  { color: var(--foreground-muted) !important; }
+.bg-theme          { background-color: var(--background) !important; }
+.bg-theme-secondary{ background-color: var(--background-secondary) !important; }
+
+/* Input / select inherit theme colors */
+input, select, textarea {
+  color: var(--input-color);
+  background-color: var(--input-bg);
+}
+input::placeholder,
+textarea::placeholder {
+  color: var(--foreground-muted);
+  opacity: 0.7;
+}
+select option {
+  background-color: var(--drawer-bg);
+  color: var(--foreground);
+}
+
+/* ── Utilities ──────────────────────────────────────────── */
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  .card-base {
+    background-color: var(--card);
+    border: 1px solid var(--card-border);
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card-hover:hover { background-color: var(--card-hover); }
+  .sidebar-base {
+    background-color: var(--sidebar-bg);
+    border-color: var(--sidebar-border);
+  }
+  .input-base {
+    background-color: var(--input-bg);
+    border: 1px solid var(--input-border);
+    color: var(--input-color);
+  }
+  .glass {
+    @apply backdrop-blur-lg;
+    background-color: var(--card);
+    border: 1px solid var(--card-border);
+  }
+  .neon-glow       { box-shadow: 0 0 10px rgba(249,115,22,0.5); }
+  .neon-glow-green { box-shadow: 0 0 10px rgba(34,197,94,0.5); }
+  .badge-base {
+    background-color: var(--badge-bg);
+    color: var(--foreground-muted);
   }
 }
+
+/* ── Stat Card Skeleton Pulse ───────────────────────────── */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.8; }
+}
+.skeleton-pulse { animation: skeleton-pulse 1.4s ease-in-out infinite; }
+
+/* ── Slide-in animation ─────────────────────────────────── */
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+.slide-in { animation: slideIn 0.3s cubic-bezier(0.16,1,0.3,1); }
+
+/* ── Custom scrollbar ───────────────────────────────────── */
+::-webkit-scrollbar        { width: 6px; }
+::-webkit-scrollbar-track  { background: var(--scrollbar-track); }
+::-webkit-scrollbar-thumb  { background: var(--scrollbar-thumb); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
