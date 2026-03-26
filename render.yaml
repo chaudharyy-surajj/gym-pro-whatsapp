@@ -22,7 +22,7 @@ services:
     env: node
     region: singapore
     plan: free
-    buildCommand: npm ci
+    buildCommand: npm ci && npx puppeteer browsers install chrome
     startCommand: npm run bot
     envVars:
       - key: NODE_ENV
@@ -31,6 +31,8 @@ services:
         fromDatabase:
           name: gym-pro-db
           property: connectionString
+      - key: PUPPETEER_CACHE_DIR
+        value: /opt/render/.cache/puppeteer
     autoDeploy: true
 
 databases:
