@@ -33,6 +33,7 @@ async function updateStatus(status: string, qr?: string) {
       update: { status, qr: qr || null, updatedAt: new Date() },
       create: { id: 1, status, qr: qr || null },
     });
+    console.log(`📊 Bot status updated: ${status}`);
   } catch (err) {
     console.error("❌ Error updating status:", err);
   }
@@ -147,7 +148,8 @@ async function saveChatMsg(phone: string, text: string, direction: "INBOUND" | "
 }
 
 client.on('qr', async (qr) => {
-  console.log('--- SCAN THE QR CODE BELOW TO CONNECT YOUR WHATSAPP ---');
+  console.log('📱 QR Code generated! Scan with WhatsApp to connect.');
+  console.log('🌐 Or check your website dashboard to scan the QR code.');
   qrcode.generate(qr, { small: true });
   await updateStatus("AWAITING_SCAN", qr);
 });
