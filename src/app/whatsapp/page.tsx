@@ -134,6 +134,40 @@ export default function WhatsAppPage() {
           </div>
         </header>
 
+        {/* QR Code Banner - Shows when bot is disconnected */}
+        {botData?.status !== "CONNECTED" && botData?.qr && (
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border-b-2 border-yellow-400 p-4">
+            <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="bg-white p-2 rounded-lg shadow-lg">
+                  <img 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(botData.qr)}`} 
+                    alt="WhatsApp QR Code"
+                    className="w-20 h-20"
+                  />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-yellow-900 dark:text-yellow-100 mb-1">
+                    🔌 WhatsApp Bot Not Connected
+                  </h3>
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    Scan this QR code with your WhatsApp to connect the bot
+                  </p>
+                </div>
+              </div>
+              <div className="hidden md:block">
+                <div className="bg-yellow-100 dark:bg-yellow-900/40 rounded-lg p-3 text-xs text-yellow-900 dark:text-yellow-100">
+                  <p className="font-bold mb-1">📱 How to scan:</p>
+                  <p>1. Open WhatsApp on your phone</p>
+                  <p>2. Go to Settings → Linked Devices</p>
+                  <p>3. Tap "Link a Device"</p>
+                  <p>4. Scan this QR code</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex-1 flex overflow-hidden">
           
           {/* Chat List Sider */}
